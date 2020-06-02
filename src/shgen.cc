@@ -98,7 +98,7 @@ std::string load(const shgen_config& c, const std::string& addr)
     return str.str();
 }
 
-double K(const unsigned int l, const int m)
+double K(const shgen_config& c, const unsigned int l, const int m)
 {
     const unsigned int cABSM = abs(m);
 
@@ -107,7 +107,9 @@ double K(const unsigned int l, const int m)
 
     for (unsigned int k = l + cABSM; k > (l - cABSM); k--) { uVal *= k; }
 
-    return std::sqrt((2.0 * l + 1.0) / (4 * PI * uVal));
+    double cs = c.condon_shortley ? ((m % 2) ? -1 : 1) : 1;
+
+    return std::sqrt((2.0 * l + 1.0) / (4 * PI * uVal)) * cs;
 }
 
 double Pmm(int m)
@@ -121,14 +123,13 @@ double Pmm(int m)
 
 std::string sRuleA(const shgen_config& c, const int m, double fVal)
 {
-    return constant(c, double(Pmm(m) * K(m, m) * fVal));
+    return constant(c, Pmm(m) * K(c, m, m) * fVal);
 }
 
 std::string sRuleB(const shgen_config& c, const int m, double fVal)
 {
-    return mul(c,
-               constant(c, double((2 * m + 1.0) * Pmm(m) * K(m + 1, m) * fVal)),
-               g_sZ);
+    return mul(
+        c, constant(c, (2 * m + 1.0) * Pmm(m) * K(c, m + 1, m) * fVal), g_sZ);
 }
 
 std::string sRuleC(const shgen_config& c,
@@ -138,8 +139,8 @@ std::string sRuleC(const shgen_config& c,
                    const std::string& sPm2)
 {
 
-    double fA = K(l, m) / K(l - 1, m) * (2 * l - 1.0) / (l - m);
-    double fB = -K(l, m) / K(l - 2, m) * (l + m - 1.0) / (l - m);
+    double fA = K(c, l, m) / K(c, l - 1, m) * (2 * l - 1.0) / (l - m);
+    double fB = -K(c, l, m) / K(c, l - 2, m) * (l + m - 1.0) / (l - m);
 
     return add(c,
                mul(c, mul(c, constant(c, fA), g_sZ), sPm1),
@@ -154,20 +155,21 @@ std::string sRuleD(const shgen_config& c, const int m, double fVal)
         c,
         mul(c,
             constant(c,
-                     double((2 * m + 3) * (2 * m + 1) * Pmm(m) / 2 * K(l, m)
+                     double((2 * m + 3) * (2 * m + 1) * Pmm(m) / 2 * K(c, l, m)
                             * fVal)),
             g_sZ2),
-        constant(c, double(-1.0 * (2 * m + 1) * Pmm(m) / 2 * K(l, m) * fVal)));
+        constant(
+            c, double(-1.0 * (2 * m + 1) * Pmm(m) / 2 * K(c, l, m) * fVal)));
 }
 
 std::string sRuleE(const shgen_config& c, const int m, double fVal)
 {
     const double Pu = Pmm(m);
 
-    const double fA
-        = (2 * m + 5) * (2 * m + 3) * (2 * m + 1) * Pu / 6 * K(m + 3, m) * fVal;
+    const double fA = (2 * m + 5) * (2 * m + 3) * (2 * m + 1) * Pu / 6
+                      * K(c, m + 3, m) * fVal;
 
-    const double fB = -fVal * K(m + 3, m)
+    const double fB = -fVal * K(c, m + 3, m)
                       * ((2 * m + 5) * (2 * m + 1) * Pu / 6
                          + (2 * m + 2) * (2 * m + 1) * Pu / 3);
 
@@ -195,32 +197,57 @@ std::string sCreateCosReccur(const shgen_config& c,
     return sub(c, mul(c, g_sX, sCL), mul(c, g_sY, sSL));
 }
 
-void build_raw_functions(const shgen_config& c, std::ostringstream& output, int lmax)
+std::string ignore_unused(const std::string& val)
+{
+    std::ostringstream sstr;
+    sstr << "SHGEN_IGNORE_UNUSED(" << val << ");";
+    return sstr.str();
+}
+
+void build_raw_functions(const shgen_config& c,
+                         std::ostringstream& output,
+                         int lmax)
 {
     unsigned int l, m;
     const double dSqrt2 = sqrt(2.0);
+    const std::string tyname = c.template_p? "T" : (c.single_p? "float" : "double");
 
     if (c.sse) {
         output
             << "void SHEval" << lmax
             << "(const float *pX, const float *pY, const float *pZ, float *pSH)"
             << c.le << "{" << c.le;
+        
+        if(lmax != 0) {
+            output << c.indent << "__m128 fX, fY, fZ;" << c.le;
+            output << c.indent << "__m128 fC0, fC1, fS0, fS1, fTmpA, fTmpB, fTmpC;"
+                   << c.le <<  c.le;
 
-        output << c.indent << "__m128 fX,fY,fZ;" << c.le;
-        output << c.indent << "__m128 fC0,fC1,fS0,fS1,fTmpA,fTmpB,fTmpC;"
-               << c.le;
-
-        output << c.indent << "fX = _mm_load_ps(pX);" << c.le << c.indent
-               << "fY = _mm_load_ps(pY);" << c.indent << c.le << c.indent
-               << "fZ = _mm_load_ps(pZ);" << c.le << c.le;
+            output << c.indent << "fX = _mm_load_ps(pX);" << c.le << c.indent
+                   << "fY = _mm_load_ps(pY);" << c.indent << c.le << c.indent
+                   << "fZ = _mm_load_ps(pZ);" << c.le << c.le;
+        } else {
+            output << c.indent << ignore_unused("pX") << c.le;
+            output << c.indent << ignore_unused("pY") << c.le;
+            output << c.indent << ignore_unused("pZ") << c.le;
+        }
     }
     else {
+        if(c.template_p)
+            output << "template <typename T>" << c.le;
+        
         output << "void SHEval" << lmax
-               << "(const float fX, const float fY, const float fZ, float *pSH)"
+               << "(const " << tyname << " fX, const " << tyname << " fY, const " << tyname << " fZ, " << tyname << " *pSH)"
                << c.le << "{" << c.le;
 
-        output << c.indent << "float fC0,fC1,fS0,fS1,fTmpA,fTmpB,fTmpC;"
-               << c.le;
+        if(lmax != 0) {
+            output << c.indent << tyname << " fC0, fC1, fS0, fS1, fTmpA, fTmpB, fTmpC;"
+                   << c.le;
+        } else {
+            output << c.indent << ignore_unused("fX") << c.le;
+            output << c.indent << ignore_unused("fY") << c.le;
+            output << c.indent << ignore_unused("fZ") << c.le;
+        }
     }
 
     if (lmax >= 2) {
@@ -228,15 +255,20 @@ void build_raw_functions(const shgen_config& c, std::ostringstream& output, int 
             output << c.indent << "__m128 fZ2 = " << mul(c, g_sZ, g_sZ) << ";"
                    << c.le << c.le;
         else
-            output << c.indent << "float fZ2 = fZ*fZ;" << c.le << c.le;
+            output << c.indent << tyname << " fZ2 = fZ * fZ;" << c.le << c.le;
     }
     else {
         output << c.le;    // make sure we have the extra line...
     }
 
     // DC is trivial
-    output << c.indent << assign(c, shIdx(c, 0), constant(c, K(0, 0))) << ";"
+    output << c.indent << assign(c, shIdx(c, 0), constant(c, K(c, 0, 0))) << ";"
            << c.le;
+        
+    if(lmax == 0){
+        output << "}" << c.le;
+        return;
+    }
 
     m = 0;
     l = 1;
@@ -244,7 +276,7 @@ void build_raw_functions(const shgen_config& c, std::ostringstream& output, int 
     int idx = l * l + l;
 
     output << c.indent << assign(c, shIdx(c, idx), sRuleB(c, m, 1.0)) << ";"
-           << c.le;
+           << c.le << c.le;
 
     if (lmax >= 2) {
         l   = 2;
@@ -308,7 +340,7 @@ void build_raw_functions(const shgen_config& c, std::ostringstream& output, int 
                << ";" << c.le;
         output << c.indent
                << assign(c, shIdx(c, idxS), mul(c, sPrev[idxP], sS[idxSC & 1]))
-               << ";" << c.le;
+               << ";" << c.le << c.le;
 
         if (m + 1 <= lmax) {
             l++;
@@ -328,7 +360,7 @@ void build_raw_functions(const shgen_config& c, std::ostringstream& output, int 
             output << c.indent
                    << assign(
                           c, shIdx(c, idxS), mul(c, sPrev[idxP], sS[idxSC & 1]))
-                   << ";" << c.le;
+                   << ";" << c.le << c.le;
         }
 
         if (m + 2 <= lmax) {
@@ -349,7 +381,7 @@ void build_raw_functions(const shgen_config& c, std::ostringstream& output, int 
             output << c.indent
                    << assign(
                           c, shIdx(c, idxS), mul(c, sPrev[idxP], sS[idxSC & 1]))
-                   << ";" << c.le;
+                   << ";" << c.le << c.le;
         }
 
         if (m + 3 <= lmax) {
