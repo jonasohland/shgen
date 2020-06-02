@@ -1,0 +1,3 @@
+[submodule "dep/Clara"]
+	path = dep/Clara
+	url = https://github.com/catchorg/Clara
