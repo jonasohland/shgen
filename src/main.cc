@@ -24,34 +24,52 @@ std::string into_comment_end = R"(
 
 )";
 
+std::string basepath(const std::string& path)
+{
+    auto tkit = path.find_last_of("/");
+
+    if (tkit == std::string::npos) return "";
+
+    return path.substr(0, tkit);
+}
+
+std::string filecmpnt(const std::string& path)
+{
+    auto tkit = path.find_last_of("/");
+
+    if (tkit == std::string::npos) return path;
+
+    return path.substr(tkit + 1, path.size() - 1);
+}
+
 void shgen_config_resolve(shgen_config& conf)
 {
-    if (conf.double_p)
-        conf.single_p = false;
+    if (conf.double_p) conf.single_p = false;
 
     if (conf.sse) {
-        conf.single_p   = true;
-        
-        if(conf.double_p)
-            std::cerr << "Warning: SSE selected, ignoring double-precision option.\n";
-        
-        if(conf.template_p)
+        conf.single_p = true;
+
+        if (conf.double_p)
+            std::cerr
+                << "Warning: SSE selected, ignoring double-precision option.\n";
+
+        if (conf.template_p)
             std::cerr << "Warning: SSE selected, ignoring template option.\n";
-        
+
         conf.double_p   = false;
         conf.template_p = false;
     }
 
-    if (!conf.sourcefile.size()){
-        if(!conf.header_only)
+    if (!conf.sourcefile.size()) {
+        if (!conf.header_only)
             std::cerr << "No source file given, assuming header-only.\n";
-        
+
         conf.header_only = true;
     }
 
-    if (conf.headerfile == "-"){
-        conf.header_only = true;
-    }
+    if (conf.headerfile == "-") { conf.header_only = true; }
+
+    if (conf.template_p) conf.header_only = true;
 }
 
 void write_file_header_comment(std::ostream& stream,
@@ -65,7 +83,7 @@ void write_file_header_comment(std::ostream& stream,
     stream << intro_comment;
     stream << "    Generated " << std::put_time(std::gmtime(&now), "%c %Z")
            << " by the command: " << conf.le;
-    stream << conf.indent << "shgen ";
+    stream << conf.indent_fnbody << "shgen ";
 
     for (int i = 1; i < argc; ++i) {
         if (conf.headerfile == argv[i] or conf.sourcefile == argv[i]) continue;
@@ -75,29 +93,84 @@ void write_file_header_comment(std::ostream& stream,
 
     stream << into_comment_end;
 
+    if (is_header) stream << "#pragma once" << conf.le << conf.le;
+
     if (conf.sse && conf.header_only) stream << sse_includes << conf.le;
 
-    if (conf.lmin < 1 && conf.header_only) stream << ignore_unused_macro << conf.le;
+    if (conf.lmin < 1 && (conf.header_only || !is_header))
+        stream << ignore_unused_macro << conf.le;
 }
 
-void build_headerfile(std::ostream& stream, const shgen_config& conf)
+void build_headerfile(std::ostream& stream, shgen_config& conf)
 {
-    
-    
+    int namespace_lvls = 0;
+
+    if (conf.nmspace.size()) {
+        ++namespace_lvls;
+
+        conf.indent_namespace = conf.indent_namespace.append("    ");
+        conf.indent_fnbody    = conf.indent_fnbody.append("    ");
+
+        stream << "namespace " << conf.nmspace << " { " << conf.le;
+
+        if (conf.detail_nmspace.size()) {
+            ++namespace_lvls;
+            stream << conf.indent_namespace << "namespace "
+                   << conf.detail_nmspace << " {";
+            conf.indent_namespace = conf.indent_namespace.append("    ");
+            conf.indent_fnbody    = conf.indent_fnbody.append("    ");
+        }
+
+        stream << conf.le << conf.le;
+    }
+
     for (int l = conf.lmin; l < conf.lmax + 1; ++l) {
 
-        if(conf.header_only)
-            build_raw_functions(conf, stream, l);
+        if (conf.header_only)
+            build_raw_functions(conf, stream, l, false);
         else {
-            build_function_definition(conf, stream, l);
+            build_function_definition(conf, stream, l, false);
             stream << ";" << conf.le;
         }
-            
+
         if (l < conf.lmax) stream << conf.le;
     }
+
+    for (int i = 0; i < namespace_lvls; ++i) {
+
+        conf.indent_fnbody
+            = conf.indent_fnbody.substr(0, conf.indent_fnbody.size() - 4);
+
+        conf.indent_namespace
+            = conf.indent_namespace.substr(0, conf.indent_namespace.size() - 4);
+
+        stream << conf.indent_namespace << "}" << conf.le;
+    }
+
+    if (namespace_lvls) stream << conf.le;
 }
 
-void build_sourcefile(std::ostream& stream, shgen_config& c) {}
+void build_sourcefile(std::ostream& stream, shgen_config& c)
+{
+    auto hfilename = filecmpnt(c.headerfile);
+
+    stream << "#include ";
+
+    // use system include style (#include <thing.h> not #include "thing.h")
+    if (basepath(c.headerfile) != basepath(c.sourcefile))
+        stream << "<" << hfilename << ">";
+    else
+        stream << "\"" << hfilename << "\"";
+
+    if (c.sse) stream << c.le << sse_includes;
+
+    stream << c.le << c.le;
+
+    for (int l = c.lmin; l < c.lmax + 1; ++l) {
+        build_raw_functions(c, stream, l, true);
+        if (l < c.lmax) stream << c.le;
+    }
+}
 
 int main(int argc, const char** argv)
 {
@@ -150,8 +223,8 @@ int main(int argc, const char** argv)
         return 0;
     }
 
-    std::ostream* hfile_ptr;
-    std::ostream* sfile_ptr;
+    std::ostream* hfile_ptr = nullptr;
+    std::ostream* sfile_ptr = nullptr;
 
     if (conf.headerfile == "-")
         hfile_ptr = &std::cout;
@@ -164,17 +237,14 @@ int main(int argc, const char** argv)
             return 1;
         }
     }
-    
-    if(conf.sourcefile.size()) {
+
+    if (conf.sourcefile.size()) {
         sfile_ptr = new std::fstream(conf.sourcefile, std::ios::out);
-        
         if (sfile_ptr->fail()) {
-            
             std::cerr << "Failed to open file " + conf.headerfile << "\n";
-            
-            if(hfile_ptr)
-                delete hfile_ptr;
-            
+
+            if (hfile_ptr) delete hfile_ptr;
+
             delete sfile_ptr;
             return 1;
         }
@@ -189,6 +259,7 @@ int main(int argc, const char** argv)
     }
 
     if (hfile_ptr != &std::cout) delete hfile_ptr;
+    if (sfile_ptr) delete sfile_ptr;
 
     return 0;
 }

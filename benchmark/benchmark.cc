@@ -1,6 +1,8 @@
 #include <benchmark/benchmark.h>
 #include <iostream>
 
+#include "sheval.h"
+#include "sheval.cc"
 
 namespace sh {
     #include "shgentest.h"
@@ -49,13 +51,26 @@ void tsheval(T x, T y, T z, T* sh)
         sh::SHEval2(x,y,z,sh);
 }
 
+namespace _shgen {
+    void eval(int Lmax, float x, float y, float z, float* shx)
+    {
+        switch (Lmax) {
+            case 0: return sh::SHEval0(x, y, z, shx);
+            case 1: return sh::SHEval1(x, y, z, shx);
+            case 2: return sh::SHEval2(x, y, z, shx);
+            case 3: return sh::SHEval3(x, y, z, shx);
+            case 4: return sh::SHEval4(x, y, z, shx);
+        }
+    }
+}
+
 
 int main()
 {
     float iemdata[16];
     float shgendata[16];
     
-    tsheval<float, 2>(1., 1., 0., shgendata);
+    _shgen::eval(3, 1, 1, 1, shgendata);
     
     std::cout.precision(2);
     

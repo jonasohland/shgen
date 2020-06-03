@@ -12,11 +12,22 @@ struct shgen_config {
     int lmax             = 7;
     bool header_only     = false;
     bool cxx_17          = false;
+    bool sysinclude      = false;
+    std::string nmspace { "shgen" };
+    std::string detail_nmspace { "detail" };
     std::string headerfile { "-" };
     std::string sourcefile { "" };
     std::string le { "\n" };
-    std::string indent { "    " };
+    std::string indent_fnbody { "    " };
+    std::string indent_namespace { "" };
 };
 
-void build_raw_functions(const shgen_config&, std::ostream&, int lmax);
-void build_function_definition(const shgen_config&, std::ostream&, int lmax);
+void build_raw_functions(shgen_config&,
+                         std::ostream&,
+                         int lmax,
+                         bool implementation);
+
+void build_function_definition(shgen_config&,
+                               std::ostream&,
+                               int lmax,
+                               bool implementation);
