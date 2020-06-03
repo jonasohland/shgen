@@ -204,46 +204,64 @@ std::string ignore_unused(const std::string& val)
     return sstr.str();
 }
 
-void build_raw_functions(const shgen_config& c,
-                         std::ostringstream& output,
-                         int lmax)
+std::string tname(const shgen_config& c)
+{
+    return c.template_p ? "T" : (c.single_p ? "float" : "double");
+}
+
+void build_function_definition(const shgen_config& c,
+                               std::ostream& output,
+                               int lmax)
+{
+    const std::string tyname = tname(c);
+    
+    if (c.sse) {
+        output << "void SHEval" << lmax
+               << "(const float *pX, const float *pY, const float *pZ, float "
+                  "*pSH)";
+    }
+    else {
+        if (c.template_p) output << "template <typename T>" << c.le;
+
+        output << "void SHEval" << lmax << "(const " << tyname << " fX, const "
+               << tyname << " fY, const " << tyname << " fZ, " << tyname
+               << " *pSH)";
+    }
+}
+
+void build_raw_functions(const shgen_config& c, std::ostream& output, int lmax)
 {
     unsigned int l, m;
     const double dSqrt2 = sqrt(2.0);
-    const std::string tyname = c.template_p? "T" : (c.single_p? "float" : "double");
+    const std::string tyname = tname(c);
+        
+    build_function_definition(c, output, lmax);
+
+    output << c.le << "{" << c.le;
 
     if (c.sse) {
-        output
-            << "void SHEval" << lmax
-            << "(const float *pX, const float *pY, const float *pZ, float *pSH)"
-            << c.le << "{" << c.le;
-        
-        if(lmax != 0) {
+        if (lmax != 0) {
             output << c.indent << "__m128 fX, fY, fZ;" << c.le;
-            output << c.indent << "__m128 fC0, fC1, fS0, fS1, fTmpA, fTmpB, fTmpC;"
-                   << c.le <<  c.le;
+            output << c.indent
+                   << "__m128 fC0, fC1, fS0, fS1, fTmpA, fTmpB, fTmpC;" << c.le
+                   << c.le;
 
             output << c.indent << "fX = _mm_load_ps(pX);" << c.le << c.indent
                    << "fY = _mm_load_ps(pY);" << c.indent << c.le << c.indent
                    << "fZ = _mm_load_ps(pZ);" << c.le << c.le;
-        } else {
+        }
+        else {
             output << c.indent << ignore_unused("pX") << c.le;
             output << c.indent << ignore_unused("pY") << c.le;
             output << c.indent << ignore_unused("pZ") << c.le;
         }
     }
     else {
-        if(c.template_p)
-            output << "template <typename T>" << c.le;
-        
-        output << "void SHEval" << lmax
-               << "(const " << tyname << " fX, const " << tyname << " fY, const " << tyname << " fZ, " << tyname << " *pSH)"
-               << c.le << "{" << c.le;
-
-        if(lmax != 0) {
-            output << c.indent << tyname << " fC0, fC1, fS0, fS1, fTmpA, fTmpB, fTmpC;"
-                   << c.le;
-        } else {
+        if (lmax != 0) {
+            output << c.indent << tyname
+                   << " fC0, fC1, fS0, fS1, fTmpA, fTmpB, fTmpC;" << c.le;
+        }
+        else {
             output << c.indent << ignore_unused("fX") << c.le;
             output << c.indent << ignore_unused("fY") << c.le;
             output << c.indent << ignore_unused("fZ") << c.le;
@@ -264,8 +282,8 @@ void build_raw_functions(const shgen_config& c,
     // DC is trivial
     output << c.indent << assign(c, shIdx(c, 0), constant(c, K(c, 0, 0))) << ";"
            << c.le;
-        
-    if(lmax == 0){
+
+    if (lmax == 0) {
         output << "}" << c.le;
         return;
     }

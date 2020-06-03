@@ -1,9 +1,11 @@
 #include "clara.hpp"
 #include "shgen.h"
 #include <ctime>
+#include <fstream>
 #include <iomanip>
 
-std::string ignore_unused_macro = R"(#define SHGEN_IGNORE_UNUSED(expr) do { (void)(expr); } while (0)
+std::string ignore_unused_macro
+    = R"(#define SHGEN_IGNORE_UNUSED(expr) do { (void)(expr); } while (0)
 )";
 
 std::string sse_includes = R"(#include <mmintrin.h>
@@ -21,6 +23,81 @@ std::string into_comment_end = R"(
 */
 
 )";
+
+void shgen_config_resolve(shgen_config& conf)
+{
+    if (conf.double_p)
+        conf.single_p = false;
+
+    if (conf.sse) {
+        conf.single_p   = true;
+        
+        if(conf.double_p)
+            std::cerr << "Warning: SSE selected, ignoring double-precision option.\n";
+        
+        if(conf.template_p)
+            std::cerr << "Warning: SSE selected, ignoring template option.\n";
+        
+        conf.double_p   = false;
+        conf.template_p = false;
+    }
+
+    if (!conf.sourcefile.size()){
+        if(!conf.header_only)
+            std::cerr << "No source file given, assuming header-only.\n";
+        
+        conf.header_only = true;
+    }
+
+    if (conf.headerfile == "-"){
+        conf.header_only = true;
+    }
+}
+
+void write_file_header_comment(std::ostream& stream,
+                               shgen_config& conf,
+                               bool is_header,
+                               int argc,
+                               const char** argv)
+{
+    std::time_t now = std::time(nullptr);
+
+    stream << intro_comment;
+    stream << "    Generated " << std::put_time(std::gmtime(&now), "%c %Z")
+           << " by the command: " << conf.le;
+    stream << conf.indent << "shgen ";
+
+    for (int i = 1; i < argc; ++i) {
+        if (conf.headerfile == argv[i] or conf.sourcefile == argv[i]) continue;
+
+        stream << argv[i] << " ";
+    }
+
+    stream << into_comment_end;
+
+    if (conf.sse && conf.header_only) stream << sse_includes << conf.le;
+
+    if (conf.lmin < 1 && conf.header_only) stream << ignore_unused_macro << conf.le;
+}
+
+void build_headerfile(std::ostream& stream, const shgen_config& conf)
+{
+    
+    
+    for (int l = conf.lmin; l < conf.lmax + 1; ++l) {
+
+        if(conf.header_only)
+            build_raw_functions(conf, stream, l);
+        else {
+            build_function_definition(conf, stream, l);
+            stream << ";" << conf.le;
+        }
+            
+        if (l < conf.lmax) stream << conf.le;
+    }
+}
+
+void build_sourcefile(std::ostream& stream, shgen_config& c) {}
 
 int main(int argc, const char** argv)
 {
@@ -53,20 +130,15 @@ int main(int argc, const char** argv)
         clara::Opt(conf.single_p)["-f"]["--float"]("Single precision") |
         clara::Opt(conf.template_p)["-t"]["--template"]("Templated version") |
         clara::Opt(conf.template_loop)["-T"]["--template-loop"]("Compile time unrolled loop with templates") |
+        clara::Opt(conf.cxx_17)["-7"]["--cxx-17"]("Enable C++17 specific stuff") |
         clara::Opt(line_ending, "line-ending")["-e"]["--line-ending"]("Line endings (LF/CRLF)") |
-        clara::Arg(conf.outfile, "output-file");
+        clara::Arg(conf.headerfile, "header") |
+        clara::Arg(conf.sourcefile, "source");
     // clang-format on
 
     auto res = cli.parse(clara::Args(argc, argv));
-    
-    if(conf.double_p)
-        conf.single_p = false;
-    
-    if(conf.sse) {
-        conf.single_p = true;
-        conf.double_p = false;
-        conf.template_p = false;
-    }
+
+    shgen_config_resolve(conf);
 
     if (!res) {
         std::cerr << "Error: " << res.errorMessage() << "\n";
@@ -78,59 +150,45 @@ int main(int argc, const char** argv)
         return 0;
     }
 
-    std::ostringstream stream;
-    
-    std::time_t now = std::time(nullptr);
-    
-    stream << intro_comment;
-    stream << "    Generated " << std::put_time(std::gmtime(&now), "%c %Z") << " by the command: " << conf.le;
-    stream << conf.indent << "shgen ";
-    
-    for(int i = 1; i < argc; ++i){
-        if(conf.outfile == argv[i])
-            continue;
-        
-        stream << argv[i] << " ";
+    std::ostream* hfile_ptr;
+    std::ostream* sfile_ptr;
+
+    if (conf.headerfile == "-")
+        hfile_ptr = &std::cout;
+    else {
+        hfile_ptr = new std::fstream(conf.headerfile, std::ios::out);
+
+        if (hfile_ptr->fail()) {
+            std::cerr << "Failed to open file " + conf.headerfile << "\n";
+            delete hfile_ptr;
+            return 1;
+        }
     }
     
-    stream << into_comment_end;
-    
-    if(conf.sse)
-        stream << sse_includes << conf.le;
-    
-    if(conf.lmin < 1)
-        stream << ignore_unused_macro << conf.le;
-
-    for (int l = conf.lmin; l < conf.lmax + 1; ++l){
-        build_raw_functions(conf, stream, l);
+    if(conf.sourcefile.size()) {
+        sfile_ptr = new std::fstream(conf.sourcefile, std::ios::out);
         
-        if(l < conf.lmax)
-            stream << conf.le;
+        if (sfile_ptr->fail()) {
+            
+            std::cerr << "Failed to open file " + conf.headerfile << "\n";
+            
+            if(hfile_ptr)
+                delete hfile_ptr;
+            
+            delete sfile_ptr;
+            return 1;
+        }
     }
 
+    write_file_header_comment(*hfile_ptr, conf, true, argc, argv);
+    build_headerfile(*hfile_ptr, conf);
 
-    /* std::ostringstream testout;
+    if (!conf.header_only) {
+        write_file_header_comment(*sfile_ptr, conf, false, argc, argv);
+        build_sourcefile(*sfile_ptr, conf);
+    }
 
-    testout.precision(2);
-
-    for(int i = 0; i < 5; ++i) {
-
-        float x[4] = { (float) i / 100, (float) i/100, (float) i/100, (float)
-    i/100 }; float y[4] = {0.f, 0.f, 0.f, 0.f}; float z[4] = {0.f, 0.f, 0.f,
-    0.f};
-
-        float data[16];
-
-        SHEval1(x, y, z, data);
-
-        for(int k = 0; k < 16; ++k)
-            testout << data[k] << " ";
-
-        testout << "\n";
-    }*/
-
-
-    std::cout << stream.str();
+    if (hfile_ptr != &std::cout) delete hfile_ptr;
 
     return 0;
 }

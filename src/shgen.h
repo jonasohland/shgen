@@ -8,12 +8,15 @@ struct shgen_config {
     bool template_p      = false;
     bool template_loop   = false;
     bool condon_shortley = false;
-    int lmin        = 0;
+    int lmin             = 0;
     int lmax             = 7;
-    bool header_only     = true;
-    std::string outfile { "-" };
+    bool header_only     = false;
+    bool cxx_17          = false;
+    std::string headerfile { "-" };
+    std::string sourcefile { "" };
     std::string le { "\n" };
     std::string indent { "    " };
 };
 
-void build_raw_functions(const shgen_config&, std::ostringstream&, int lmax);
+void build_raw_functions(const shgen_config&, std::ostream&, int lmax);
+void build_function_definition(const shgen_config&, std::ostream&, int lmax);
