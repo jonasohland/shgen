@@ -13,7 +13,7 @@ add_executable(shgen
     
 if(NOT MSVC)
     target_compile_options(shgen PUBLIC -Wall -Wextra -pedantic -Werror)
-else
+else()
     target_compile_definitions(shgen PUBLIC _CRT_SECURE_NO_WARNINGS)
 endif()
 
