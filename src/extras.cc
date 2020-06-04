@@ -173,6 +173,9 @@ void switch_eval_fun(const shgen_config& c, std::ostream& file, bool header)
 
 void add_extras(const shgen_config& conf, std::ostream& file, bool header)
 {
+    if(conf.sse)
+        return;
+    
     if (header && !conf.c) {
         if (conf.cxx_17)
             cxx17_eval_fun(conf, file);

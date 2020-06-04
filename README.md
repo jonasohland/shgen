@@ -5,6 +5,8 @@
   - [Output modes]()
   - [Formatting]()
   - [Value-type options]()
+  - [SSE intrinsics]()
+  - [AVX1/2/512 support]()
   - [Eval functions]()
     - [C-mode]()
     - [C++-mode]()

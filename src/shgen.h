@@ -24,6 +24,7 @@ struct shgen_config {
     std::string indent_fnbody { "    " };
     std::string indent_namespace { "" };
     std::string indet_w { "    " };
+    int simd_vsize = 128;
 };
 
 std::string sh_eval_fname(const shgen_config&, int l, bool, bool);

@@ -12,8 +12,7 @@ std::string ignore_unused_macro
     = R"(#define SHGEN_IGNORE_UNUSED(expr) do { (void)(expr); } while (0)
 )";
 
-std::string sse_includes = R"(#include <mmintrin.h>
-#include <xmmintrin.h>
+std::string sse_includes = R"(#include <immintrin.h>
 )";
 
 std::string intro_comment = R"(/*
