@@ -22,7 +22,7 @@ jobs:
         cd build
 
     - name: Configure for platform
-      run: cmake -DCMakeBuildType=Release
+      run: cmake -DCMAKE_BUILD_TYPE=Release .
       
     - name: Build
       run: cmake --build .
