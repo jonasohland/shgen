@@ -31,19 +31,14 @@ jobs:
         cd build
 
     - name: Configure for platform
-      run: cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE .
+      run: cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_INSTALL_PREFIX="$HOME/shgen_install" .
 
     - name: Build
       run: cmake --build .
 
     - name: Install
       shell: bash
-      run: |
-        if [ "$RUNNER" = "windows-latest" ]; then 
-          cmake --build . --target install
-        else
-          sudo cmake --build . --target install
-        fi
+      run: cmake --build . --target install
 
     - name: Run-Get-Version
-      run: shgen --version
+      run: $HOME/shgen_install/bin/shgen --version
