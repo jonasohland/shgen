@@ -9,25 +9,31 @@ on:
 jobs:
 
   build:
-    
+
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
           os: [ubuntu-latest, windows-latest, macos-latest]
           env.BUILD_TYPE: [Release, Debug]
-    
+
 
     steps:
     - uses: actions/checkout@v2
-      
+
     - name: Checkout submodules
-      run: | 
+      run: |
         git submodule update --init
         mkdir build
         cd build
 
     - name: Configure for platform
       run: cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE .
-      
+
     - name: Build
       run: cmake --build .
+
+    - name: Install
+      run: cmake --build . --target install
+
+    - name: Run-Get-Version
+      run: shgen --version
