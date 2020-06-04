@@ -223,6 +223,7 @@ int main(int argc, const char** argv)
 
     // clang-format off
     auto cli = clara::Help(conf.printhelp) |
+        clara::Opt(conf.printver)["-v"]["--version"]("Print version and exit") |
         clara::Opt(conf.header_only)["-H"]["--header-only"]("Output only a header file") |
         clara::Opt(conf.sse)["-s"]["--sse"]("Use SSE instructions") |
         clara::Opt(conf.condon_shortley)["-C"]["--condon-shortley"]("Include condon shortley phase thingy") |
@@ -239,9 +240,7 @@ int main(int argc, const char** argv)
     // clang-format on
 
     auto res = cli.parse(clara::Args(argc, argv));
-
-    shgen_config_resolve(conf);
-
+    
     if (!res) {
         std::cerr << "Error: " << res.errorMessage() << "\n";
         return 1;
@@ -251,6 +250,15 @@ int main(int argc, const char** argv)
         std::cout << cli << "\n";
         return 0;
     }
+    
+    if(conf.printver) {
+#define SHGEN_STR_IMPL(x) #x
+#define SHGEN_STR(x) SHGEN_STR_IMPL(x)
+        std::cout << "shgen-" << SHGEN_STR(SHGEN_VERSION) << "\n";
+        return 0;
+    }
+
+    shgen_config_resolve(conf);
 
     std::ostream* hfile_ptr = nullptr;
     std::ostream* sfile_ptr = nullptr;

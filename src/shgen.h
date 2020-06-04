@@ -3,6 +3,7 @@
 
 struct shgen_config {
     bool printhelp       = false;
+    bool printver        = false;
     bool sse             = false;
     bool double_p        = false;
     bool single_p        = true;
