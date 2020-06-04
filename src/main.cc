@@ -231,7 +231,6 @@ int main(int argc, const char** argv)
         clara::Opt(conf.double_p)["-d"]["--double"]("Double precision") |
         clara::Opt(conf.single_p)["-f"]["--float"]("Single precision") |
         clara::Opt(conf.template_p)["-t"]["--template"]("Templated version") |
-        clara::Opt(conf.template_loop)["-T"]["--template-loop"]("Compile time unrolled loop with templates") |
         clara::Opt(conf.c)["-c"]["--c-mode"]("Emit plain and simple c, without all the template stuff") |
         clara::Opt(conf.cxx_17)["-7"]["--cxx-17"]("Enable C++17 specific stuff") |
         clara::Opt(line_ending, "line-ending")["-e"]["--line-ending"]("Line endings (LF/CRLF)") |
