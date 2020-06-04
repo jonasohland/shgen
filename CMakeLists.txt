@@ -10,6 +10,10 @@ add_executable(shgen
     ${CMAKE_CURRENT_LIST_DIR}/src/extras.cc
     ${CMAKE_CURRENT_LIST_DIR}/src/shgen.h
     ${CMAKE_CURRENT_LIST_DIR}/src/extras.h)
+    
+if(NOT MSVC)
+    target_compile_options(shgen PUBLIC -Wall -Wextra -pedantic -Werror)
+endif()
 
 if(benchmark_FOUND)
     add_executable(shgen_benchmark

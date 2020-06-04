@@ -26,7 +26,7 @@ struct shgen_config {
 
 void build_raw_functions(shgen_config&,
                          std::ostream&,
-                         int lmax,
+                         unsigned int lmax,
                          bool implementation);
 
 void build_function_definition(shgen_config&,

@@ -241,7 +241,7 @@ void build_function_definition(shgen_config& c,
 
 void build_raw_functions(shgen_config& c,
                          std::ostream& output,
-                         int lmax,
+                         unsigned int lmax,
                          bool implementation)
 {
     unsigned int l, m;
