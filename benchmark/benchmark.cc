@@ -1,9 +1,6 @@
 #include <benchmark/benchmark.h>
 #include <iostream>
 
-#include "sheval.h"
-#include "sheval.cc"
-
 int main()
 {
     float iemdata[16];
