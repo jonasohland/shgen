@@ -5,6 +5,9 @@
 #include <fstream>
 #include <iomanip>
 
+#define SHGEN_STR_IMPL(x) #x
+#define SHGEN_STR(x) SHGEN_STR_IMPL(x)
+
 std::string ignore_unused_macro
     = R"(#define SHGEN_IGNORE_UNUSED(expr) do { (void)(expr); } while (0)
 )";
@@ -100,7 +103,7 @@ void write_file_header_comment(std::ostream& stream,
 
     stream << intro_comment;
     stream << "    Generated " << std::put_time(std::gmtime(&now), "%c %Z")
-           << " by the command: " << conf.le;
+           << " with shgen " << SHGEN_STR(SHGEN_VERSION) << " by the command: " << conf.le;
     stream << conf.indent_fnbody << "shgen ";
 
     for (int i = 1; i < argc; ++i) {
@@ -252,8 +255,6 @@ int main(int argc, const char** argv)
     }
     
     if(conf.printver) {
-#define SHGEN_STR_IMPL(x) #x
-#define SHGEN_STR(x) SHGEN_STR_IMPL(x)
         std::cout << "shgen-" << SHGEN_STR(SHGEN_VERSION) << "\n";
         return 0;
     }

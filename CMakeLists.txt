@@ -2,7 +2,12 @@ cmake_minimum_required(VERSION 3.5)
 
 execute_process(COMMAND git describe --tags OUTPUT_VARIABLE shgen_version OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-project(shgen VERSION ${shgen_version})
+string(REPLACE "-" ";" shgen_ver_list ${shgen_version})
+list(GET shgen_ver_list 0 shgen_proj_ver)
+
+message(STATUS "shgen version: ${shgen_proj_ver}")
+
+project(shgen VERSION ${shgen_proj_ver})
 
 find_package(benchmark)
 
@@ -14,7 +19,7 @@ add_executable(shgen
     ${CMAKE_CURRENT_LIST_DIR}/src/extras.h)
 
 target_compile_definitions(shgen PRIVATE "SHGEN_VERSION=${shgen_version}")
-    
+
 if(NOT MSVC)
     target_compile_options(shgen PUBLIC -Wall -Wextra -pedantic -Werror)
 else()
