@@ -9,8 +9,13 @@ on:
 jobs:
 
   build:
-
-    runs-on: ubuntu-latest
+    
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+          os: [ubuntu-latest, windows-latest, macos-latest]
+          env.BUILD_TYPE: [Release, Debug]
+    
 
     steps:
     - uses: actions/checkout@v2
@@ -22,7 +27,7 @@ jobs:
         cd build
 
     - name: Configure for platform
-      run: cmake -DCMAKE_BUILD_TYPE=Release .
+      run: cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE .
       
     - name: Build
       run: cmake --build .
