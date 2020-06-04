@@ -1,4 +1,5 @@
 #include "clara.hpp"
+#include "extras.h"
 #include "shgen.h"
 #include <ctime>
 #include <fstream>
@@ -86,7 +87,7 @@ void write_file_header_comment(std::ostream& stream,
     stream << conf.indent_fnbody << "shgen ";
 
     for (int i = 1; i < argc; ++i) {
-        if (conf.headerfile == argv[i] or conf.sourcefile == argv[i]) continue;
+        if (conf.headerfile == argv[i] || conf.sourcefile == argv[i]) continue;
 
         stream << argv[i] << " ";
     }
@@ -136,11 +137,20 @@ void build_headerfile(std::ostream& stream, shgen_config& conf)
         if (l < conf.lmax) stream << conf.le;
     }
 
-    for (int i = 0; i < namespace_lvls; ++i) {
-
+    if (namespace_lvls > 1) {
         conf.indent_fnbody
             = conf.indent_fnbody.substr(0, conf.indent_fnbody.size() - 4);
+        conf.indent_namespace
+            = conf.indent_namespace.substr(0, conf.indent_namespace.size() - 4);
+        --namespace_lvls;
+        stream << conf.indent_namespace << "}" << conf.le;
+    }
 
+    add_extras(conf, stream, true);
+
+    for (int i = 0; i < namespace_lvls; ++i) {
+        conf.indent_fnbody
+            = conf.indent_fnbody.substr(0, conf.indent_fnbody.size() - 4);
         conf.indent_namespace
             = conf.indent_namespace.substr(0, conf.indent_namespace.size() - 4);
 
@@ -170,6 +180,8 @@ void build_sourcefile(std::ostream& stream, shgen_config& c)
         build_raw_functions(c, stream, l, true);
         if (l < c.lmax) stream << c.le;
     }
+
+    add_extras(c, stream, false);
 }
 
 int main(int argc, const char** argv)

@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 
 struct shgen_config {
@@ -20,6 +21,7 @@ struct shgen_config {
     std::string le { "\n" };
     std::string indent_fnbody { "    " };
     std::string indent_namespace { "" };
+    std::string indet_w { "    " };
 };
 
 void build_raw_functions(shgen_config&,
