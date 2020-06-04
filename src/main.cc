@@ -70,6 +70,23 @@ void shgen_config_resolve(shgen_config& conf)
 
     if (conf.headerfile == "-") { conf.header_only = true; }
 
+    if (conf.c) {
+        if (conf.template_p) {
+            std::cerr << "C-mode selected, ignoring template option.\n";
+            conf.template_p = false;
+        }
+        
+        if (conf.cxx_17) {
+            std::cerr << "C-mode selected, ignoring cxx_17 option.\n";
+            conf.cxx_17 = false;
+        }
+
+        conf.nmspace          = "";
+        conf.detail_nmspace   = "";
+        conf.indent_fnbody    = "    ";
+        conf.indent_namespace = "";
+    }
+
     if (conf.template_p) conf.header_only = true;
 }
 
@@ -215,6 +232,7 @@ int main(int argc, const char** argv)
         clara::Opt(conf.single_p)["-f"]["--float"]("Single precision") |
         clara::Opt(conf.template_p)["-t"]["--template"]("Templated version") |
         clara::Opt(conf.template_loop)["-T"]["--template-loop"]("Compile time unrolled loop with templates") |
+        clara::Opt(conf.c)["-c"]["--c-mode"]("Emit plain and simple c, without all the template stuff") |
         clara::Opt(conf.cxx_17)["-7"]["--cxx-17"]("Enable C++17 specific stuff") |
         clara::Opt(line_ending, "line-ending")["-e"]["--line-ending"]("Line endings (LF/CRLF)") |
         clara::Arg(conf.headerfile, "header") |

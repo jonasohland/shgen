@@ -13,6 +13,7 @@ struct shgen_config {
     int lmax             = 7;
     bool header_only     = false;
     bool cxx_17          = false;
+    bool c               = false;
     bool sysinclude      = false;
     std::string nmspace { "shgen" };
     std::string detail_nmspace { "detail" };
@@ -23,6 +24,8 @@ struct shgen_config {
     std::string indent_namespace { "" };
     std::string indet_w { "    " };
 };
+
+std::string sh_eval_fname(const shgen_config&, int l, bool, bool);
 
 void build_raw_functions(shgen_config&,
                          std::ostream&,

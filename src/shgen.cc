@@ -9,6 +9,22 @@ std::string g_sY  = "fY";
 std::string g_sZ  = "fZ";
 std::string g_sZ2 = "fZ2";
 
+std::string
+sh_eval_fname(const shgen_config& c, int l, bool implementation, bool nameonly)
+{
+    std::ostringstream ostr;
+
+    if (!c.c && !nameonly) {
+        if (implementation) ostr << c.nmspace << "::";
+
+        ostr << c.detail_nmspace << "::";
+    }
+
+    ostr << "shgen_eval_l" << l;
+
+    return ostr.str();
+}
+
 std::string float_literal(const shgen_config& c)
 {
     return c.single_p ? "f" : "";
@@ -224,7 +240,7 @@ void build_function_definition(shgen_config& c,
 
     if (c.sse) {
         output << c.indent_namespace << "void " << namespace_acc.str()
-               << "SHEval" << lmax
+               << sh_eval_fname(c, lmax, false, true)
                << "(const float *pX, const float *pY, const float *pZ, float "
                   "*pSH)";
     }
@@ -233,9 +249,9 @@ void build_function_definition(shgen_config& c,
             output << c.indent_namespace << "template <typename T>" << c.le;
 
         output << c.indent_namespace << "void " << namespace_acc.str()
-               << "SHEval" << lmax << "(const " << tyname << " fX, const "
-               << tyname << " fY, const " << tyname << " fZ, " << tyname
-               << " *pSH)";
+               << sh_eval_fname(c, lmax, false, true) << "(const " << tyname
+               << " fX, const " << tyname << " fY, const " << tyname << " fZ, "
+               << tyname << " *pSH)";
     }
 }
 
