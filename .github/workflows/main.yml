@@ -38,7 +38,7 @@ jobs:
 
     - name: Install
       shell: bash
-      run: 
+      run: |
         if [ "$RUNNER" = "windows-latest" ]; then 
           cmake --build . --target install
         else
