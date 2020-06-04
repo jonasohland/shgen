@@ -15,7 +15,6 @@ jobs:
           os: [ubuntu-latest, windows-latest, macos-latest]
           env.BUILD_TYPE: [Release, Debug]
     
-
     env: 
       RUNNER: ${{ matrix.os }}
     
@@ -26,9 +25,7 @@ jobs:
         fetch-depth: 0
 
     - name: Setup build
-      run: |
-        mkdir build
-        cd build
+      run: mkdir build && cd build
 
     - name: Configure for platform
       run: cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_INSTALL_PREFIX="$HOME/shgen_install" .
@@ -37,8 +34,8 @@ jobs:
       run: cmake --build .
 
     - name: Install
-      shell: bash
       run: cmake --build . --target install
 
     - name: Run-Get-Version
+      shell: bash
       run: $HOME/shgen_install/bin/shgen --version
