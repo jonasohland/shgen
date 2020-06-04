@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.5)
 
 if(NOT shgen_version)
-    execute_process(COMMAND git describe --tags OUTPUT_VARIABLE shgen_version OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND git describe --tags 
+                    OUTPUT_VARIABLE shgen_version
+                    WORKING_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}"
+                    OUTPUT_STRIP_TRAILING_WHITESPACE)
     string(REPLACE "-" ";" shgen_ver_list ${shgen_version})
     list(GET shgen_ver_list 0 shgen_proj_ver)
 else()
