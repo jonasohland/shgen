@@ -33,14 +33,15 @@ void cxx11_eval_fun_template_spec(const shgen_config& c,
                                   const std::string& tyname,
                                   const std::string& indent)
 {
+    const std::string ast = c.sse? "*" : "";
+    
     output << indent << "template <>" << c.le;
-
     output << indent;
 
     if (c.template_p) output << "static ";
 
-    output << "void eval<" << l << ">(const " << tyname << " x, const "
-           << tyname << " y, const " << tyname << " z, " << tyname << "* sh)"
+    output << "void eval<" << l << ">(const " << tyname << ast << " x, const "
+           << tyname << ast << " y, const " << tyname << ast << " z, " << tyname << "* sh)"
            << c.le;
 
     output << indent << "{" << c.le;
@@ -103,7 +104,7 @@ void cxx17_eval_fun(const shgen_config& c, std::ostream& output)
 
     auto decl = [&](std::string name) {
         std::ostringstream str;
-        str << "const " << tyname << " " << name;
+        str << "const " << tyname << (c.sse? "*" : "" ) << " " << name;
         return str.str();
     };
 
@@ -144,12 +145,14 @@ void switch_eval_fun_def(const shgen_config& c,
 {
     const std::string tyname
         = c.template_p ? "T" : (c.single_p ? "float" : "double");
+    
+    const std::string ast = c.sse? "*" : "";
 
     if (c.template_p) file << indent << "template <typename T>" << c.le;
 
     file << indent << "void " << ((header || c.c)? "" : "shgen::")
-         << (c.c ? "shgen_" : "") << "eval(int l, " << tyname << " x, "
-         << tyname << " y, " << tyname << " z, " << tyname << "* sh)"
+         << (c.c ? "shgen_" : "") << "eval(int l, " << tyname << ast << " x, "
+         << tyname << ast << " y, " << tyname << ast << " z, " << tyname << "* sh)"
          << ((header && !c.header_only) ? ";" : "") << c.le;
 }
 
@@ -173,9 +176,6 @@ void switch_eval_fun(const shgen_config& c, std::ostream& file, bool header)
 
 void add_extras(const shgen_config& conf, std::ostream& file, bool header)
 {
-    if(conf.sse)
-        return;
-    
     if (header && !conf.c) {
         if (conf.cxx_17)
             cxx17_eval_fun(conf, file);
