@@ -12,14 +12,18 @@ void cxx11_eval_fun_template(const shgen_config& c,
                              const std::string& tyname,
                              const std::string& indent)
 {
+    const std::string ast = c.sse ? "*" : "";
     output << indent << "template <int L>" << c.le;
 
     output << indent;
 
-    if (c.template_p) output << "static ";
 
-    output << "void eval(const " << tyname << " x, const " << tyname
-           << " y, const " << tyname << " z, " << tyname << "* sh)" << c.le;
+    if (c.template_p)
+        output << "static ";
+
+    output << "void eval(const " << tyname << ast << " x, const " << tyname
+           << ast << " y, const " << tyname << ast << " z, " << tyname
+           << "* sh)" << c.le;
     output << indent << "{" << c.le;
     output << indent << c.indet_w << "static_assert(L >= " << c.lmin << " && L"
            << " <= " << c.lmax << ", \"Value for L must be in range [" << c.lmin
@@ -33,20 +37,21 @@ void cxx11_eval_fun_template_spec(const shgen_config& c,
                                   const std::string& tyname,
                                   const std::string& indent)
 {
-    const std::string ast = c.sse? "*" : "";
-    
+    const std::string ast = c.sse ? "*" : "";
+
     output << indent << "template <>" << c.le;
     output << indent;
 
-    if (c.template_p) output << "static ";
+    if (c.template_p)
+        output << "static ";
 
     output << "void eval<" << l << ">(const " << tyname << ast << " x, const "
-           << tyname << ast << " y, const " << tyname << ast << " z, " << tyname << "* sh)"
-           << c.le;
+           << tyname << ast << " y, const " << tyname << ast << " z, " << tyname
+           << "* sh)" << c.le;
 
     output << indent << "{" << c.le;
-    output << indent << c.indet_w << sh_eval_fname(c, l, false, false) << "(x, y, z, sh);"
-           << c.le;
+    output << indent << c.indet_w << sh_eval_fname(c, l, false, false)
+           << "(x, y, z, sh);" << c.le;
     output << indent << "}" << c.le;
 }
 
@@ -78,10 +83,12 @@ void cxx11_eval_fun(const shgen_config& conf, std::ostream& headerfile)
             cxx11_eval_fun_template_spec(
                 conf, headerfile, l, tyname, conf.indent_namespace);
 
-        if (l < conf.lmax) headerfile << conf.le;
+        if (l < conf.lmax)
+            headerfile << conf.le;
     }
 
-    if (conf.template_p) headerfile << conf.indent_namespace << "};" << conf.le;
+    if (conf.template_p)
+        headerfile << conf.indent_namespace << "};" << conf.le;
 }
 
 void cxx17_eval_constexpr_elif(const shgen_config& c,
@@ -90,7 +97,8 @@ void cxx17_eval_constexpr_elif(const shgen_config& c,
 {
     output << c.indent_fnbody;
 
-    if (l != c.lmin) output << "else ";
+    if (l != c.lmin)
+        output << "else ";
 
     output << "if constexpr (L == " << l << ")" << c.le;
     output << c.indent_fnbody << c.indet_w << sh_eval_fname(c, l, false, false)
@@ -102,16 +110,17 @@ void cxx17_eval_fun(const shgen_config& c, std::ostream& output)
     const std::string tyname
         = c.template_p ? "T" : (c.single_p ? "float" : "double");
 
-    auto decl = [&](std::string name) {
+    auto decl = [&](const std::string& name) {
         std::ostringstream str;
-        str << "const " << tyname << (c.sse? "*" : "" ) << " " << name;
+        str << "const " << tyname << (c.sse ? "*" : "") << " " << name;
         return str.str();
     };
 
     output << c.le;
     output << c.indent_namespace << "template <int L";
 
-    if (c.template_p) output << ", typename T";
+    if (c.template_p)
+        output << ", typename T";
 
     output << ">" << c.le;
     output << c.indent_namespace << "void eval(" << decl("x, ") << decl("y, ")
@@ -135,7 +144,8 @@ void switch_eval_fun_case(const shgen_config& c,
                           int l,
                           const std::string& indent)
 {
-    file << indent << c.indet_w << "case " << l << ": return " << sh_eval_fname(c, l, false, false) << "(x, y, z, sh);" << c.le;
+    file << indent << c.indet_w << "case " << l << ": return "
+         << sh_eval_fname(c, l, false, false) << "(x, y, z, sh);" << c.le;
 }
 
 void switch_eval_fun_def(const shgen_config& c,
@@ -145,15 +155,16 @@ void switch_eval_fun_def(const shgen_config& c,
 {
     const std::string tyname
         = c.template_p ? "T" : (c.single_p ? "float" : "double");
-    
-    const std::string ast = c.sse? "*" : "";
 
-    if (c.template_p) file << indent << "template <typename T>" << c.le;
+    const std::string ast = c.sse ? "*" : "";
 
-    file << indent << "void " << ((header || c.c)? "" : "shgen::")
+    if (c.template_p)
+        file << indent << "template <typename T>" << c.le;
+
+    file << indent << "void " << ((header || c.c) ? "" : "shgen::")
          << (c.c ? "shgen_" : "") << "eval(int l, " << tyname << ast << " x, "
-         << tyname << ast << " y, " << tyname << ast << " z, " << tyname << "* sh)"
-         << ((header && !c.header_only) ? ";" : "") << c.le;
+         << tyname << ast << " y, " << tyname << ast << " z, " << tyname
+         << "* sh)" << ((header && !c.header_only) ? ";" : "") << c.le;
 }
 
 void switch_eval_fun(const shgen_config& c, std::ostream& file, bool header)
@@ -161,7 +172,8 @@ void switch_eval_fun(const shgen_config& c, std::ostream& file, bool header)
     file << c.le;
     switch_eval_fun_def(c, file, header, c.indent_namespace);
 
-    if (header && !c.header_only) return;
+    if (header && !c.header_only)
+        return;
 
     file << c.indent_namespace << "{" << c.le;
     file << c.indent_fnbody << "switch (l) {" << c.le;

@@ -16,25 +16,26 @@ std::string simd_packed_ty(const shgen_config& c)
 
 std::string simd_insert_vsize(const shgen_config& c)
 {
-    return (c.simd_vsize > 128)? std::to_string(c.simd_vsize) : std::string();
+    return (c.simd_vsize > 128) ? std::to_string(c.simd_vsize) : std::string();
 }
 
 std::string simd_intr(const shgen_config& conf, const std::string& instruction)
 {
     std::ostringstream str;
-    str << "_mm" << conf.simd_vsize << "_" << instruction << "_p" << (conf.single_p? "s":"p");
+    str << "_mm" << conf.simd_vsize << "_" << instruction << "_p"
+        << (conf.single_p ? "s" : "p");
     return str.str();
 }
 
 std::string simd_set_broadcast_intr(int vsize)
 {
     std::ostringstream str;
-    
-    if(vsize == 128)
+
+    if (vsize == 128)
         str << "_mm_set_ps1";
     else
         str << "_mm" << vsize << "_broadcastss_ps";
-    
+
     return str.str();
 }
 
@@ -48,16 +49,16 @@ std::string simd128_set(double value)
 std::string simd_set_intr(const shgen_config& conf, double value)
 {
     std::ostringstream str;
-    
+
     str << simd_set_broadcast_intr(conf.simd_vsize) << "(";
-    
-    if(conf.simd_vsize == 128)
+
+    if (conf.simd_vsize == 128)
         str << value;
     else
         str << simd128_set(value);
-    
+
     str << ")";
-    
+
     return str.str();
 }
 
@@ -67,7 +68,8 @@ sh_eval_fname(const shgen_config& c, int l, bool implementation, bool nameonly)
     std::ostringstream ostr;
 
     if (!c.c && !nameonly) {
-        if (implementation) ostr << c.nmspace << "::";
+        if (implementation)
+            ostr << c.nmspace << "::";
 
         ostr << c.detail_nmspace << "::";
     }
@@ -101,7 +103,8 @@ mul(const shgen_config& c, const std::string lhs, const std::string rhs)
     std::ostringstream sstr;
 
     if (c.sse)
-        sstr << "_mm" << simd_insert_vsize(c) << "_mul_ps(" << lhs << "," << rhs << ")";
+        sstr << "_mm" << simd_insert_vsize(c) << "_mul_ps(" << lhs << "," << rhs
+             << ")";
     else
         sstr << lhs << " * " << rhs;
 
@@ -114,7 +117,8 @@ add(const shgen_config& c, const std::string lhs, const std::string rhs)
     std::ostringstream sstr;
 
     if (c.sse)
-        sstr << "_mm" << simd_insert_vsize(c) << "_add_ps(" << lhs << "," << rhs << ")";
+        sstr << "_mm" << simd_insert_vsize(c) << "_add_ps(" << lhs << "," << rhs
+             << ")";
     else
         sstr << lhs << " + " << rhs;
 
@@ -127,7 +131,8 @@ sub(const shgen_config& c, const std::string lhs, const std::string rhs)
     std::ostringstream sstr;
 
     if (c.sse)
-        sstr << "_mm" << simd_insert_vsize(c) << "_sub_ps(" << lhs << "," << rhs << ")";
+        sstr << "_mm" << simd_insert_vsize(c) << "_sub_ps(" << lhs << "," << rhs
+             << ")";
     else
         sstr << lhs << " - " << rhs;
 
@@ -152,7 +157,8 @@ assign(const shgen_config& c, const std::string& var, const std::string& rval)
     std::ostringstream sstr;
 
     if (c.sse)
-        sstr << "_mm" << simd_insert_vsize(c) << "_store_ps(" << var << "," << rval << ")";
+        sstr << "_mm" << simd_insert_vsize(c) << "_store_ps(" << var << ","
+             << rval << ")";
     else
         sstr << var << " = " << rval;
 
@@ -162,7 +168,8 @@ assign(const shgen_config& c, const std::string& var, const std::string& rval)
 std::string load(const shgen_config& c, const std::string& addr)
 {
     std::ostringstream str;
-    if (c.sse) str << "_mm" << simd_insert_vsize(c) << "_load_ps(" << addr << ")";
+    if (c.sse)
+        str << "_mm" << simd_insert_vsize(c) << "_load_ps(" << addr << ")";
     return str.str();
 }
 
@@ -285,7 +292,8 @@ void build_function_definition(shgen_config& c,
     const std::string tyname = tname(c);
     std::ostringstream namespace_acc;
 
-    if (implementation && c.nmspace.size()) namespace_acc << c.nmspace << "::";
+    if (implementation && c.nmspace.size())
+        namespace_acc << c.nmspace << "::";
 
     if (implementation && c.detail_nmspace.size())
         namespace_acc << c.detail_nmspace << "::";
@@ -322,15 +330,19 @@ void build_raw_functions(shgen_config& c,
 
     if (c.sse) {
         if (lmax != 0) {
-            output << c.indent_fnbody << simd_packed_ty(c) << " fX, fY, fZ;" << c.le;
-            output << c.indent_fnbody
-                   << simd_packed_ty(c) << " fC0, fC1, fS0, fS1, fTmpA, fTmpB, fTmpC;" << c.le
+            output << c.indent_fnbody << simd_packed_ty(c) << " fX, fY, fZ;"
+                   << c.le;
+            output << c.indent_fnbody << simd_packed_ty(c)
+                   << " fC0, fC1, fS0, fS1, fTmpA, fTmpB, fTmpC;" << c.le
                    << c.le;
 
-            output << c.indent_fnbody << "fX = _mm" << simd_insert_vsize(c) << "_load_ps(pX);" << c.le
-                   << c.indent_fnbody << "fY = _mm" << simd_insert_vsize(c) << "_load_ps(pY);"
-                   << c.indent_fnbody << c.le << c.indent_fnbody
-                   << "fZ = _mm" << ((c.simd_vsize > 128)? std::to_string(c.simd_vsize) : std::string()) << "_load_ps(pZ);" << c.le << c.le;
+            output << c.indent_fnbody << "fX = _mm" << simd_insert_vsize(c)
+                   << "_load_ps(pX);" << c.le << c.indent_fnbody << "fY = _mm"
+                   << simd_insert_vsize(c) << "_load_ps(pY);" << c.indent_fnbody
+                   << c.le << c.indent_fnbody << "fZ = _mm"
+                   << ((c.simd_vsize > 128) ? std::to_string(c.simd_vsize)
+                                            : std::string())
+                   << "_load_ps(pZ);" << c.le << c.le;
         }
         else {
             output << c.indent_fnbody << ignore_unused("pX") << c.le;
@@ -352,8 +364,8 @@ void build_raw_functions(shgen_config& c,
 
     if (lmax >= 2) {
         if (c.sse)
-            output << c.indent_fnbody << simd_packed_ty(c) << " fZ2 = " << mul(c, g_sZ, g_sZ)
-                   << ";" << c.le << c.le;
+            output << c.indent_fnbody << simd_packed_ty(c)
+                   << " fZ2 = " << mul(c, g_sZ, g_sZ) << ";" << c.le << c.le;
         else
             output << c.indent_fnbody << tyname << " fZ2 = fZ * fZ;" << c.le
                    << c.le;

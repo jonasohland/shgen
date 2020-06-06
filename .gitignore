@@ -1,4 +1,6 @@
 .DS_Store
+.idea
 .clangd
 compile_commands.json
 build
+cmake-build-debug
